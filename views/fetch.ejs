@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Event Dashboard</title>
+    <link
+      rel="stylesheet"
+      href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css"
+    />
+    <style>
+      /* Add your custom CSS styles here */
+      .event-container {
+        background-color: #ffffff;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 20px;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      }
+
+      .event-container h3 {
+        margin-top: 0;
+        margin-bottom: 10px;
+      }
+
+      .event-details p {
+        margin: 5px 0;
+      }
+
+      .event-container img {
+        max-width: 100%;
+        /* Set maximum width of the image to fit within the container */
+        height: auto;
+        /* Maintain aspect ratio */
+      }
+
+      #eventCards {
+        display: none;
+        /* Hide the event cards container initially */
+      }
+    </style>
+  </head>
+
+  <body>
+    <nav
+      class="navbar navbar-expand-lg navbar-dark"
+      style="background-color: rgb(23, 35, 78)"
+    >
+      <a class="navbar-brand" href="#">Event Filtering</a>
+      <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav ml-auto">
+          <li class="nav-item">
+            <a class="nav-link" href="userdashboard.html">Back to Home</a>
+          </li>
+        </ul>
+      </div>
+    </nav>
+    <br />
+    <br />
+    <div class="container">
+      <div class="row mb-3">
+        <div class="col-md-6">
+          <select id="monthSelect" class="form-control">
+            <option value="1">January</option>
+            <option value="2">February</option>
+            <option value="3">March</option>
+            <option value="4">April</option>
+            <option value="5">May</option>
+            <option value="6">June</option>
+            <option value="7">July</option>
+            <option value="8">August</option>
+            <option value="9">September</option>
+            <option value="10">October</option>
+            <option value="11">November</option>
+            <option value="12">December</option>
+          </select>
+        </div>
+        <div class="col-md-6">
+          <button id="searchBtn" class="btn btn-primary">Search</button>
+        </div>
+      </div>
+      <div id="eventCards" class="row">
+        <!-- Event cards will be dynamically added here -->
+      </div>
+    </div>
+
+    <!-- Include Bootstrap and jQuery libraries -->
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.bundle.min.js"></script>
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+
+    <script>
+      // Function to fetch event data from the server
+      function fetchEvents(month) {
+        $.get("/events", function (data) {
+          // Clear existing event cards
+          $("#eventCards").empty();
+
+          // Filter events based on the selected month
+          var filteredEvents = data.filter(function (event) {
+            var eventDate = new Date(event.startDateTime);
+            return eventDate.getMonth() + 1 == month; // +1 because getMonth returns zero-based month index
+          });
+          // Organize events into rows with three containers each
+          var row = $("<div class='row'></div>");
+          var counter = 0;
+          // Loop through each event and create event cards
+          filteredEvents.forEach(function (event) {
+            var eventCard = `
+              <div class="col-md-4">
+                  <div class="event-container">
+                      <h3>${event.eventName}</h3>
+                      <img src=${event.eventImage} />
+                      <div class="event-details">
+                          <p><strong>Description:</strong> ${
+                            event.eventDescription
+                          }</p>
+                          <p><strong>Type:</strong> ${event.eventType}</p>
+                          <p><strong>Capacity:</strong> ${event.capacity}</p>
+                          <p><strong>Start Date/Time:</strong> ${new Date(
+                            event.startDateTime
+                          ).toLocaleString()}</p>
+                          <p><strong>End Date/Time:</strong> ${new Date(
+                            event.endDateTime
+                          ).toLocaleString()}</p>
+                          <p><strong>Ticket Price:</strong> ₹${
+                            event.ticketPrice
+                          }</p>
+                          <p><strong>Venue:</strong> ${event.venueDetails}</p>
+                      </div>
+                      <a href="/booking?eventName=${encodeURIComponent(
+                        event.eventName
+                      )}&eventPrice=${
+              event.ticketPrice
+            }" class="btn btn-primary">Register</a>
+                  </div>
+              </div>
+          `;
+            row.append(eventCard);
+            counter++;
+
+            // Check if three containers have been added
+            if (counter % 3 == 0 || counter === filteredEvents.length) {
+              $("#eventCards").append(row);
+              row = $("<div class='row'></div>");
+            }
+          });
+
+          // Display the event cards container
+          $("#eventCards").show();
+        });
+      }
+
+      // Call fetchEvents function with the selected month when the search button is clicked
+      $(document).ready(function () {
+        $("#searchBtn").click(function () {
+          var selectedMonth = parseInt($("#monthSelect").val());
+          fetchEvents(selectedMonth);
+        });
+      });
+    </script>
+  </body>
+</html>

@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>User Dashboard</title>
+    <link
+      rel="stylesheet"
+      href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css"
+    />
+
+    <style>
+      /* Existing CSS styles */
+      body {
+        background-size: cover;
+        background-color: rgb(243, 242, 241);
+        color: black;
+      }
+
+      .navbar {
+        background-color: rgb(23, 35, 78);
+        transition: background-color 0.3s ease;
+      }
+
+      .navbar-nav .nav-item .nav-link {
+        color: white;
+      }
+
+      /* Your existing CSS styles */
+      .event-container {
+        transition: box-shadow 0.3s ease;
+      }
+
+      .event-container:hover {
+        box-shadow: 0 8px 12px rgba(0, 0, 0, 0.5);
+      }
+
+      .event-container {
+        background-color: #f2f2f2;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 20px;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+      }
+
+      .event-container h3 {
+        margin-top: 0;
+        margin-bottom: 10px;
+      }
+
+      .event-details p {
+        margin: 5px 0;
+      }
+
+      .event-container img {
+        max-height: 200px;
+        width: 100%;
+        margin-bottom: 10px;
+        border-radius: 4px;
+        object-fit: cover;
+      }
+
+      .register-button {
+        margin-top: auto;
+        align-self: center;
+      }
+    </style>
+  </head>
+
+  <body>
+    <nav class="navbar navbar-expand-lg navbar-light">
+      <div class="container">
+        <a class="navbar-brand" href="#" style="color: white"
+          >Event Booking System</a
+        >
+        <button
+          class="navbar-toggler"
+          type="button"
+          data-toggle="collapse"
+          data-target="#navbarNav"
+          aria-controls="navbarNav"
+          aria-expanded="false"
+          aria-label="Toggle navigation"
+        >
+          <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+          <ul class="navbar-nav ml-auto">
+            <li class="nav-item">
+              <a class="nav-link" href="/About" style="color: white"
+                >About Us</a
+              >
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="/fetch" style="color: white">Filter</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="/signup" style="color: white">Logout</a>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </nav>
+    <div class="container">
+      <br />
+      <br />
+      <div id="eventCards" class="row">
+        <!-- Event cards will be dynamically added here -->
+      </div>
+    </div>
+
+    <!-- Include Bootstrap and jQuery libraries -->
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.bundle.min.js"></script>
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+
+    <script>
+      // Function to fetch event data from the server
+      function fetchEvents() {
+        $.get("/events", function (data) {
+          // Clear existing event cards
+          $("#eventCards").empty();
+
+          // Loop through each event and create event cards
+          data.forEach(function (event) {
+            var eventCard = `
+                        <div class="col-md-4">
+                            <div class="event-container">
+                                <h3>${event.eventName}</h3>
+                                <img src=${event.eventImage} />
+                                <div class="event-details">
+                                    <p><strong>Description:</strong> ${
+                                      event.eventDescription
+                                    }</p>
+                                    <p><strong>Type:</strong> ${
+                                      event.eventType
+                                    }</p>
+                                    <p><strong>Capacity:</strong> ${
+                                      event.capacity
+                                    }</p>
+                                    <p><strong>Start Date/Time:</strong> ${new Date(
+                                      event.startDateTime
+                                    ).toLocaleString()}</p>
+                                    <p><strong>End Date/Time:</strong> ${new Date(
+                                      event.endDateTime
+                                    ).toLocaleString()}</p>
+                                    <p><strong>Ticket Price:</strong> Rs.${
+                                      event.ticketPrice
+                                    }</p>
+            <p><strong>Venue:</strong> ${event.venueDetails}</p>
+          </div>
+                                <a href="/booking?eventName=${encodeURIComponent(
+                                  event.eventName
+                                )}&eventPrice=${
+              event.ticketPrice
+            }" class="btn btn-primary">Register</a>
+                            </div>
+                        </div>
+                    `;
+            $("#eventCards").append(eventCard);
+          });
+        });
+      }
+
+      // Call fetchEvents function when the page loads
+      $(document).ready(function () {
+        fetchEvents();
+      });
+    </script>
+  </body>
+</html>

@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Event Booking</title>
+    <link
+      rel="stylesheet"
+      href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css"
+    />
+    <style>
+      /* Custom CSS styles for the form */
+      .container {
+        margin-top: 50px;
+        
+        overflow: hidden; /* Hide overflowing content */
+        transition: background-color 0.3s ease;
+      }
+
+      .form-group {
+        margin-bottom: 20px;
+      }
+      .container:hover {
+        background-color: #f0f0f0; /* Change background color on hover */
+      }
+
+      .btn-primary,
+      .btn-secondary {
+        margin-top: 20px;
+      }
+
+      #downloadSection {
+        margin-top: 30px;
+      }
+    </style>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/1.4.1/jspdf.debug.js"></script>
+  </head>
+  <body>
+    <nav
+      class="navbar navbar-expand-lg navbar-dark"
+      style="background-color: rgb(23, 35, 78)"
+    >
+      <a class="navbar-brand" href="#">Event Booking</a>
+      <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav ml-auto">
+          <li class="nav-item">
+            <a class="nav-link" href="/userdashboard">Back to Home</a>
+          </li>
+        </ul>
+      </div>
+    </nav>
+    <div class="container">
+      <div class="row">
+        <div class="col-md-6 offset-md-3">
+          <form id="bookingForm">
+            <div class="form-group">
+              <label for="eventName">Event Name:</label>
+              <input type="text" id="eventName" class="form-control" readonly />
+            </div>
+            <div class="form-group">
+              <label for="eventType">Event Type:</label>
+              <input type="text" id="eventType" class="form-control" readonly />
+            </div>
+            <div class="form-group">
+              <label for="eventDescription">Event Description:</label>
+              <textarea id="eventDescription" class="form-control" rows="4" readonly></textarea>
+            </div>
+            <div class="form-group">
+              <label for="startDateTime">Start Date/Time:</label>
+              <input type="text" id="startDateTime" class="form-control" readonly />
+            </div>
+            <div class="form-group">
+              <label for="endDateTime">End Date/Time:</label>
+              <input type="text" id="endDateTime" class="form-control" readonly />
+            </div>
+            <div class="form-group">
+              <label for="ticketPrice">Ticket Price:</label>
+              <input type="text" id="ticketPrice" class="form-control" readonly />
+            </div>
+            <div class="form-group">
+              <label for="venueDetails">Venue:</label>
+              <input type="text" id="venueDetails" class="form-control" readonly />
+            </div>
+            <div class="form-group">
+              <label for="quantity">Quantity:</label>
+              <input type="number" id="quantity" class="form-control" min="1" required />
+            </div>
+            <div class="form-group">
+              <label for="totalPrice">Total Price:</label>
+              <input type="text" id="totalPrice" class="form-control" readonly />
+            </div>
+            <button type="submit" class="btn btn-primary">Book</button>
+            <a href="/userdashboard" class="btn btn-secondary ml-2">Home</a>
+            <!-- Home button -->
+          </form>
+        </div>
+      </div>
+    </div>
+    
+      <div class="row mt-3" id="downloadSection" style="display: none">
+        <div class="col-md-6 offset-md-3">
+          <div class="form-group">
+            <button id="downloadTicket" class="btn btn-success mr-2">
+              Download Ticket
+            </button>
+            <button id="sendToEmail" class="btn btn-primary">
+              Send to Email
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+    <script>
+      $(document).ready(function () {
+        $.get("/events", function (data) {
+            if (data.length > 0) {
+                const event = data[0];
+    
+                $("#eventType").val(event.eventType);
+                $("#eventImage").attr("src", event.eventImage);
+                $("#eventName").val(event.eventName);
+                $("#eventDescription").val(event.eventDescription);
+                $("#startDateTime").val(new Date(event.startDateTime).toLocaleString());
+                $("#endDateTime").val(new Date(event.endDateTime).toLocaleString());
+                $("#ticketPrice").val(event.ticketPrice);
+                $("#venueDetails").val(event.venueDetails);
+    
+                $("#quantity").on("input", function () {
+                    const quantity = $(this).val();
+                    const totalPrice = quantity * event.ticketPrice;
+                    $("#totalPrice").val(totalPrice.toFixed(2));
+                });
+    
+                $("#bookingForm").submit(function (e) {
+                    e.preventDefault();
+                    const quantity = $("#quantity").val();
+                    const totalPrice = quantity * event.ticketPrice;
+    
+                    $(document).ready(function () {
+                        const razorpayHandler = function (response) {
+                            alert("Payment successful! Your ticket has been booked.");
+                            $("#downloadSection").show();
+                            $("button[type='submit']").hide();
+                            const bookingData = {
+                                eventName: $("#eventName").val(),
+                                eventPrice: $("#ticketPrice").val(),
+                                quantity: $("#quantity").val(),
+                                paymentId: response.razorpay_payment_id,
+                                orderId: response.orderId,
+                                totalPrice: response.totalPrice,
+                            };
+                            $.post("/save_booking", bookingData, function (data) {
+                                console.log(data);
+                            });
+                        };
+                        var options = {
+                            key: "rzp_test_9WuLEKT1yvT5zO",
+                            amount: totalPrice * 100, // Amount in paise
+                            currency: "INR",
+                            name: "Event Ticket",
+                            description: "Event Ticket Purchase",
+                            handler: razorpayHandler,
+                        };
+                        var rzp1 = new Razorpay(options);
+                        $("button[type='submit']").click(function (e) {
+                            e.preventDefault();
+                            $.post("/create_order", {
+                                eventName: $("#eventName").val(),
+                                eventPrice: $("#ticketPrice").val(),
+                                quantity: $("#quantity").val()
+                            }, function (data) {
+                                rzp1.open();
+                            });
+                        });
+                    });
+    
+                    $("#downloadTicket").click(function () {
+                        downloadTicket();
+                    });
+    
+                    $("#sendToEmail").click(function () {
+                        const recipientEmail = prompt("Enter recipient email address:");
+                        if (recipientEmail) {
+                            sendTicketToEmail(recipientEmail);
+                        }
+                    });
+    
+                    function sendTicketToEmail(recipientEmail) {
+                        var eventName = $("#eventName").val();
+                        var eventType = $("#eventType").val();
+                        var eventDescription = $("#eventDescription").val();
+                        var startDateTime = $("#startDateTime").val();
+                        var endDateTime = $("#endDateTime").val();
+                        var ticketPrice = $("#ticketPrice").val();
+                        var venueDetails = $("#venueDetails").val();
+                        var quantity = $("#quantity").val();
+                        var totalPrice = event.ticketPrice * quantity;
+    
+                        var pdf = new jsPDF();
+                        pdf.setFontSize(16);
+                        pdf.text("Confirmed Ticket", 105, 20, null, null, "center");
+                        pdf.setFontStyle("bold");
+                        pdf.text("Event Name:", 20, 40);
+                        pdf.text("Event Type:", 20, 50);
+                        pdf.text("Event Description:", 20, 60);
+                        pdf.text("Start Date/Time:", 20, 70);
+                        pdf.text("End Date/Time:", 20, 80);
+                        pdf.text("Ticket Price (In Rs):", 20, 90);
+                        pdf.text("Venue:", 20, 100);
+                        pdf.text("Quantity:", 20, 110);
+                        pdf.text("Total Price(In Rs):", 20, 120);
+                        pdf.setFontStyle("normal");
+                        pdf.text(eventName, 80, 40);
+                        pdf.text(eventType, 80, 50);
+                        pdf.text(eventDescription, 80, 60);
+                        pdf.text(startDateTime, 80, 70);
+                        pdf.text(endDateTime, 80, 80);
+                        pdf.text(ticketPrice, 80, 90);
+                        pdf.text(venueDetails, 80, 100);
+                        pdf.text(quantity, 80, 110);
+                        pdf.text(totalPrice.toFixed(2), 80, 120);
+                        pdf.rect(10, 30, 190, 110);
+                        var pdfData = pdf.output();
+                        var base64Data = btoa(pdfData);
+                        $.ajax({
+                            type: "POST",
+                            url: "/send_email",
+                            data: {
+                                recipientEmail: recipientEmail,
+                                pdfData: base64Data,
+                                eventName: eventName,
+                                eventType: eventType,
+                                eventDescription: eventDescription,
+                                startDateTime: startDateTime,
+                                endDateTime: endDateTime,
+                                ticketPrice: ticketPrice,
+                                venueDetails: venueDetails,
+                                quantity: quantity,
+                                totalPrice: totalPrice.toFixed(2)
+                            },
+                            success: function (response) {
+                                alert("Email sent successfully.");
+                            },
+                            error: function (error) {
+                                console.error("Error sending email:", error);
+                                alert("Error sending email. Please try again.");
+                            },
+                        });
+                    }
+    
+                    function downloadTicket() {
+                        var pdf = new jsPDF();
+                        pdf.setFontSize(16);
+                        pdf.text("Confirmed Ticket", 105, 20, null, null, "center");
+                        pdf.setFontStyle("bold");
+                        pdf.text("Event Name:", 20, 40);
+                        pdf.text("Event Type:", 20, 50);
+                        pdf.text("Event Description:", 20, 60);
+                        pdf.text("Start Date/Time:", 20, 70);
+                        pdf.text("End Date/Time:", 20, 80);
+                        pdf.text("Ticket Price(Rs):", 20, 90);
+                        pdf.text("Venue:", 20, 100);
+                        pdf.text("Quantity:", 20, 110);
+                        pdf.text("Total Price(Rs):", 20, 120);
+                        pdf.setFontStyle("normal");
+                        pdf.text($("#eventName").val(), 80, 40);
+                        pdf.text($("#eventType").val(), 80, 50);
+                        pdf.text($("#eventDescription").val(), 80, 60);
+                        pdf.text($("#startDateTime").val(), 80, 70);
+                        pdf.text($("#endDateTime").val(), 80, 80);
+                        pdf.text($("#ticketPrice").val(), 80, 90);
+                        pdf.text($("#venueDetails").val(), 80, 100);
+                        pdf.text($("#quantity").val(), 80, 110);
+                        pdf.text($("#totalPrice").val(), 80, 120);
+                        pdf.rect(10, 30, 190, 110);
+                        pdf.save("EventTicket.pdf");
+                    }
+    
+                });
+            } else {
+                console.error("No events found.");
+            }
+        }).fail(function (error) {
+            console.error("Error fetching events:", error);
+        });
+    });
+    
+    
+      </script>
+      
+  </body>
+</html>
